@@ -1,0 +1,174 @@
+version: '3.8'
+
+services:
+
+  mysql-db:
+    image: mysql:8.0
+    container_name: mysql-db
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks:
+      - nopki-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  eureka-server:
+    build: ./servicio-eureka
+    image: ryuko67/nopki-servicio-eureka:latest
+    container_name: eureka-server
+    ports:
+      - "8761:8761"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    networks:
+      - nopki-network
+
+  servicio-autenticacion:
+    build: ./servicio-autenticacion
+    image: ryuko67/nopki-servicio-autenticacion:latest
+    container_name: servicio-autenticacion
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    depends_on:
+      mysql-db:
+        condition: service_healthy
+      eureka-server:
+        condition: service_started
+    networks:
+      - nopki-network
+
+  servicio-catalogo:
+    build: ./servicio-catalogo
+    image: ryuko67/nopki-servicio-catalogo:latest
+    container_name: servicio-catalogo
+    ports:
+      - "8082:8082"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    depends_on:
+      mysql-db:
+        condition: service_healthy
+      eureka-server:
+        condition: service_started
+    networks:
+      - nopki-network
+
+  servicio-licencias:
+    build: ./servicio-licencias
+    image: ryuko67/nopki-servicio-licencias:latest
+    container_name: servicio-licencias
+    ports:
+      - "8083:8083"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    depends_on:
+      mysql-db:
+        condition: service_healthy
+      eureka-server:
+        condition: service_started
+      servicio-catalogo:
+        condition: service_started
+    networks:
+      - nopki-network
+
+  servicio-pedidos:
+    build: ./servicio-pedidos
+    image: ryuko67/nopki-servicio-pedidos:latest
+    container_name: servicio-pedidos
+    ports:
+      - "8084:8084"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    depends_on:
+      mysql-db:
+        condition: service_healthy
+      eureka-server:
+        condition: service_started
+      servicio-autenticacion:
+        condition: service_started
+      servicio-catalogo:
+        condition: service_started
+    networks:
+      - nopki-network
+
+  servicio-pagos:
+    build: ./servicio-pagos
+    image: ryuko67/nopki-servicio-pagos:latest
+    container_name: servicio-pagos
+    ports:
+      - "8085:8085"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    depends_on:
+      mysql-db:
+        condition: service_healthy
+      eureka-server:
+        condition: service_started
+      servicio-pedidos:
+        condition: service_started
+      servicio-licencias:
+        condition: service_started
+    networks:
+      - nopki-network
+
+  servicio-biblioteca:
+    build: ./servicio-biblioteca
+    image: ryuko67/nopki-servicio-biblioteca:latest
+    container_name: servicio-biblioteca
+    ports:
+      - "8086:8086"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    depends_on:
+      mysql-db:
+        condition: service_healthy
+      eureka-server:
+        condition: service_started
+    networks:
+      - nopki-network
+
+  servicio-resenas:
+    build: ./servicio-resenas
+    image: ryuko67/nopki-servicio-resenas:latest
+    container_name: servicio-resenas
+    ports:
+      - "8087:8087"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    depends_on:
+      mysql-db:
+        condition: service_healthy
+      eureka-server:
+        condition: service_started
+      servicio-biblioteca:
+        condition: service_started
+    networks:
+      - nopki-network
+
+  servicio-enrutamiento:
+    build: ./servicio-enrutamiento
+    image: ryuko67/nopki-servicio-enrutamiento:latest
+    container_name: servicio-enrutamiento
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    depends_on:
+      eureka-server:
+        condition: service_started
+    networks:
+      - nopki-network
+
+networks:
+  nopki-network:
+    driver: bridge
+
+volumes:
+  mysql-data:
